@@ -9,7 +9,6 @@ from datetime import date, datetime, timedelta
 from django.db.models import Q
 
 
-
 # Create your views here.
 
 class RegionViewAPI(ModelViewSet):
@@ -347,3 +346,9 @@ class DistrictMemberTodoCountView(APIView):
 
         return Response(result)
 
+
+def delete_todo_by_date():
+    todos = datetime.now()
+    print(todos.month - 2)
+
+delete_todo_by_date()

@@ -7,10 +7,24 @@ from .models import Region, District, Task, Member, Todo
 @admin.register(Region)
 class RegionAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')
+    fields = ('id', 'name')
 
 @admin.register(District)
 class DistrictAdmin(admin.ModelAdmin):
     list_display = ('region', 'name', 'user')
+
+    def has_change_permission(self, request, obj=None):
+        if obj is not None and obj.user != request.user:
+            return False
+        return True
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and obj.user != request.user:
+            return False
+        return True
+    def save_model(self, request, obj, form, change):
+        obj.user = request.user
+        super().save_model(self, request, obj, form, change)
 
 
 @admin.register(Task)
@@ -21,6 +35,19 @@ class TaskAdmin(admin.ModelAdmin):
 @admin.register(Member)
 class MemberAdmin(admin.ModelAdmin):
     list_display = ('id', 'district', 'full_name', 'phone', 'telegram_id', 'user')
+
+    def has_change_permission(self, request, obj=None):
+        if obj is not None and obj.user != request.user:
+            return False
+        return True
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and obj.user != request.user:
+            return False
+        return True
+    def save_model(self, request, obj, form, change):
+        obj.user = request.user
+        super().save_model(self, request, obj, form, change)
 
 
 class TodoAdmin(ImportExportModelAdmin):
