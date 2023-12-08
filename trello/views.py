@@ -347,8 +347,3 @@ class DistrictMemberTodoCountView(APIView):
         return Response(result)
 
 
-def delete_todo_by_date():
-    todos = datetime.now()
-    print(todos.month - 2)
-
-delete_todo_by_date()
