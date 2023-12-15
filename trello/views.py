@@ -232,7 +232,7 @@ class TodoCountView(APIView):
         result = []
 
         for region in regions:
-            region_data = {'region': region.name, 'counts': {}}
+            region_data = {'region_id': region.id,'region': region.name, 'counts': {}}
 
             tasks = Task.objects.all()
             for task in tasks:
