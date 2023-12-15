@@ -277,7 +277,7 @@ class RegionTodoCountView(APIView):
         result = {'region': region.name, 'districts': []}
 
         for district in districts:
-            district_data = {'district': district.name, 'counts': {}}
+            district_data = {'district_id': district.id, 'district': district.name, 'counts': {}}
 
             tasks = Task.objects.all()
             for task in tasks:
