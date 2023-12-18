@@ -46,8 +46,10 @@ class MemberAdmin(admin.ModelAdmin):
             return False
         return True
     def save_model(self, request, obj, form, change):
-        obj.user = request.user
-        super().save_model(self, request, obj, form, change)
+        # Qo'shish vaqti bo'lsa
+        if not change:
+            obj.user = request.user  # User ni qo'shuvchi foydalanuvchi sifatida tanlash
+        obj.save()
 
 
 class TodoAdmin(ImportExportModelAdmin):
