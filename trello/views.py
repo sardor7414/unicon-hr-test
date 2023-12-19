@@ -315,10 +315,11 @@ class DistrictMemberTodoCountView(APIView):
 
         try:
             members = Member.objects.filter(district_id=district_id)
+            district_name = District.objects.get(id=district_id).name
         except Member.DoesNotExist:
             return Response({'error': 'District not found'}, status=404)
 
-        result = {'district_id': district_id, 'members': []}
+        result = {'district_id': district_id, 'district_name': district_name, 'members': []}
 
         for member in members:
             member_data = {'member_id': member.id, 'full_name': member.full_name, 'counts': {}}

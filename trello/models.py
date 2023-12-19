@@ -49,7 +49,6 @@ class Member(DefaultAbstract):
     user = models.ForeignKey("user.User", on_delete=models.SET_NULL, blank=True, null=True, verbose_name="Adminstratorni tanlang: ")
     telegram_id = models.BigIntegerField(blank=True, null=True, unique=True)
 
-
     def save_model(self, request, obj, form, change):
         # Qo'shish vaqti bo'lsa
         if not change:
