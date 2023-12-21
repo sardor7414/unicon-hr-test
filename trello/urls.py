@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (RegionViewAPI, DistrictViewSetAPI, MemberViewSetAPI, CheckUserTelegramIDAPI, TaskViewSetAPI,
-                    TodoViewSetAPI, GetTodoByTelegramID, RegionTodoCount, RegionTodoDistrictCount, DistrictTodoMemberCount,
+                    TodoViewSetAPI, GetTodoByTelegramID, RegionStatsViewSet, DistrictStatsByRegion, DistrictTodoMemberCount,
                     TaskTodoCount, TodoCountView, RegionTodoCountView, DistrictMemberTodoCountView)
 
 
@@ -18,8 +18,8 @@ urlpatterns = [
     path('', include(router.urls)),
     path('checkMember/<int:telegram_id>/', CheckUserTelegramIDAPI.as_view()),
     path('getTodo/<int:telegram_id>/', GetTodoByTelegramID.as_view()),
-    path('region-todo-count/', RegionTodoCount.as_view(), name='region-todo-count'),
-    path('district-todo-count-by-region/', RegionTodoDistrictCount.as_view(), name='region-district-todo-count'),
+    path('region-stats/', RegionStatsViewSet.as_view({'get': 'get'}), name='region-stat'),
+    path('district-stats-by-region/<int:region_id>/', DistrictStatsByRegion.as_view({'get': 'list'}), name='district-stat-by-region'),
     path('member-count-by-district/', DistrictTodoMemberCount.as_view(), name='district-todo-count'),
     path('task-todo-count/', TaskTodoCount.as_view(), name='task-todo-count'),
     # Task lar kesimida Todos larni olish

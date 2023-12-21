@@ -1,4 +1,4 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, viewsets
 from .models import Region, District, Member, Task, Todo
 from rest_framework.viewsets import ModelViewSet
 from .serializers import RegionSerializer, DistrictSerializer, MemberSerializer, TaskSerializer, TodoSerializer
@@ -62,7 +62,7 @@ class CheckUserTelegramIDAPI(APIView):
         return Response({"is_registered": True,
                          "member_id": member.id})
 
-                    
+
 class TaskViewSetAPI(ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
@@ -83,73 +83,186 @@ class GetTodoByTelegramID(APIView):
         return Response(serializer.data)
 
 
-# Regionlar bo'yicha bajarilgan ishlar uchu filter
-def get_todo_counts_by_period(period):
-    today = datetime.now().date()
-    this_week_start = today - timedelta(days=today.weekday())
-    this_month_start = today.replace(day=1)
+class RegionStatsViewSet(viewsets.GenericViewSet):
+    serializer_class = RegionSerializer
+    queryset = Region.objects.all()
 
-    region_todo_counts = Region.objects.annotate(
-        todo_count=Count('district__member__todo', filter=Q(district__member__todo__created_at__date=today))
-        if period == 'today' else
-        Count('district__member__todo', filter=Q(district__member__todo__created_at__date__gte=this_week_start))
-        if period == 'this_week' else
-        Count('district__member__todo', filter=Q(district__member__todo__created_at__date__gte=this_month_start))
-    )
-
-    result = [
-        {'region': region.name, 'todo_count': region.todo_count}
-        for region in region_todo_counts
-    ]
-    return result
-
-
-# Regionlar bo'yicha bajarilgan ishlar
-class RegionTodoCount(APIView):
     def get(self, request, *args, **kwargs):
-        period = request.query_params.get('period', None)
-        if period not in ['today', 'this_week', 'this_month']:
-            return Response({'error': 'Invalid period'})
+        # Filterlarni olish
+        period = request.query_params.get('period', 'today')
+        daily_plan = int(request.query_params.get('daily_plan', 1))
 
-        result = get_todo_counts_by_period(period)
+        # Regionlar ro'yxati
+        regions = Region.objects.annotate(
+            count_district=Count('district', distinct=True),
+            member_count=Count('member', distinct=True)
+        )
+
+        # Har bir Region uchun count_per_interval va todo_countlar
+        result = []
+        total_results = {
+            'region': 'Total',
+            'count_district': 0,
+            'member_count': 0,
+            'count_per_interval': 0,
+            'todo_count': 0,
+            'percentage': 0,
+            'difference': 0,
+        }
+        for region in regions:
+            # Datelarni olish
+            today_date = datetime.now().date()
+            yesterday_date = today_date - timedelta(days=1)
+            this_week_date = today_date - timedelta(days=datetime.now().weekday())
+            this_month_date = today_date.replace(day=1)
+
+            # Filterlarni tayyorlash
+            period_filters = {
+                'today': Q(created_at__date=today_date),
+                'yesterday': Q(created_at__date=yesterday_date),
+                'this_week': Q(created_at__date__gte=this_week_date),
+                'this_month': Q(created_at__date__gte=this_month_date),
+            }
+
+            # Har bir period uchun this_week_days ni aniqlash
+            if period == 'today':
+                this_week_days = 1
+            elif period == 'yesterday':
+                this_week_days = 1
+            elif period == 'this_week':
+                this_week_days = (today_date - this_week_date).days + 1
+            elif period == 'this_month':
+                this_week_days = (today_date - this_month_date).days + 1
+
+            count_per_interval = daily_plan * region.member_count * this_week_days
+
+            # Todolarni sanash
+            todo_count = Todo.objects.filter(
+                Q(member__district__region=region) & period_filters[period]
+            ).count()
+
+            # Foizlar va farqlar
+            percentage = (todo_count / count_per_interval) * 100 if count_per_interval > 0 else 0
+            difference = todo_count - count_per_interval
+
+            total_results['count_district'] += region.count_district
+            total_results['member_count'] += region.member_count
+            total_results['count_per_interval'] += count_per_interval
+            total_results['todo_count'] += todo_count
+            total_results['difference'] += difference
+
+            result.append({
+                'region': region.name,
+                'count_district': region.count_district,
+                'member_count': region.member_count,
+                'count_per_interval': count_per_interval,
+                'todo_count': todo_count,
+                'percentage': f"{round(percentage, 1)}%",
+                'difference': difference,
+            })
+
+        result.append(total_results)
         return Response(result)
 
 
 
-# Bitta Regionga tegishli tumanlar hisoboti ushun filter
-def get_todo_counts_by_period_for_region(region_id, period):
-    today = datetime.now().date()
-    this_week_start = today - timedelta(days=today.weekday())
-    this_month_start = today.replace(day=1)
+class DistrictStatsByRegion(viewsets.GenericViewSet):
+    serializer_class = RegionSerializer
+    queryset = Region.objects.all()
 
-    district_todo_counts = District.objects.filter(region_id=region_id).annotate(
-        todo_count=Count('member__todo', filter=Q(member__todo__created_at__date=today))
-        if period == 'today' else
-        Count('member__todo', filter=Q(member__todo__created_at__date__gte=this_week_start))
-        if period == 'this_week' else
-        Count('member__todo', filter=Q(member__todo__created_at__date__gte=this_month_start))
-    )
+    def list(self, request, *args, **kwargs):
+        # Filterlarni olish
+        period = request.query_params.get('period', 'today')
+        daily_plan = int(request.query_params.get('daily_plan', 1))
+        region_id = kwargs.get('region_id')  # Region ID ni olish
 
-    result = [
-        {'district': district.name, 'todo_count': district.todo_count}
-        for district in district_todo_counts
-    ]
+        try:
+            # Regionlarni aniqlash
+            region = Region.objects.get(id=region_id)
+        except Region.DoesNotExist:
+            return Response({'error': 'Region not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    return result
+        # Har bir period uchun this_week_days ni aniqlash
+        if period == 'today':
+            this_week_days = 1
+            today_date = datetime.now().date()
+            yesterday_date = today_date - timedelta(days=1)
+            this_week_date = today_date
+            this_month_date = today_date.replace(day=1)
+        elif period == 'yesterday':
+            this_week_days = 1
+            today_date = datetime.now().date()
+            yesterday_date = today_date - timedelta(days=1)
+            this_week_date = today_date
+            this_month_date = today_date.replace(day=1)
+        elif period == 'this_week':
+            this_week_days = datetime.now().weekday() + 1
+            today_date = datetime.now().date()
+            yesterday_date = today_date - timedelta(days=1)
+            this_week_date = today_date - timedelta(days=datetime.now().weekday())
+            this_month_date = today_date.replace(day=1)
+        elif period == 'this_month':
+            this_week_days = (datetime.now().date() - datetime.now().replace(day=1).date()).days + 1
+            today_date = datetime.now().date()
+            yesterday_date = today_date - timedelta(days=1)
+            this_week_date = today_date - timedelta(days=datetime.now().weekday())
+            this_month_date = today_date.replace(day=1)
 
-# Bitta Regionga tegishli tumanlar hisoboti
-class RegionTodoDistrictCount(APIView):
-    def get(self, request, *args, **kwargs):
-        region_id = self.request.query_params.get('region_id', None)
-        period = self.request.query_params.get('period', None)
+        # Districtlar ro'yxati
+        districts = region.district_set.annotate(
+            member_count=Count('member', distinct=True)
+        )
 
-        if not region_id or not period or period not in ['today', 'this_week', 'this_month']:
-            return Response({'error': 'Invalid parameters'})
+        # Har bir District uchun count_per_interval va todo_countlar
+        result = []
+        total_results = {
+            'region': region.name,
+            'count_district': 0,
+            'member_count': 0,
+            'count_per_interval': 0,
+            'todo_count': 0,
+            'percentage': 0,
+            'difference': 0,
+        }
+        for district in districts:
+            # Filterlarni tayyorlash
+            period_filters = {
+                'today': Q(created_at__date=today_date),
+                'yesterday': Q(created_at__date=yesterday_date),
+                'this_week': Q(created_at__date__gte=this_week_date),
+                'this_month': Q(created_at__date__gte=this_month_date),
+            }
 
-        result = get_todo_counts_by_period_for_region(region_id, period)
+            count_per_interval = daily_plan * district.member_count * this_week_days
+
+            # Todolarni sanash
+            todo_count = Todo.objects.filter(
+                Q(member__district=district) & period_filters[period]
+            ).count()
+
+            # Foizlar va farqlar
+            percentage = (todo_count / count_per_interval) * 100 if count_per_interval > 0 else 0
+            difference = todo_count - count_per_interval
+
+            total_results['count_district'] += 1
+            total_results['member_count'] += district.member_count
+            total_results['count_per_interval'] += count_per_interval
+            total_results['todo_count'] += todo_count
+            total_results['difference'] += difference
+
+            result.append({
+                'district': district.name,
+                'member_count': district.member_count,
+                'count_per_interval': count_per_interval,
+                'todo_count': todo_count,
+                'percentage': f"{round(percentage, 1)}%",
+                'difference': difference,
+            })
+
+        result.append(total_results)
         return Response(result)
 
-# Bitta tumandagi xodimlar hisoboti uchun filter
+
 def get_todo_counts_by_period_for_district(district_id, period):
     today = datetime.now().date()
     this_week_start = today - timedelta(days=today.weekday())
