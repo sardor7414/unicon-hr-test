@@ -72,6 +72,17 @@ class TodoViewSetAPI(ModelViewSet):
     queryset = Todo.objects.all()
     serializer_class = TodoSerializer
 
+    def get(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+
+        # Modify the response data to include 'full_name' directly under 'member'
+        data = serializer.data
+        member_full_name = instance.member.full_name
+        data['member'] = member_full_name
+
+        return Response(data)
+
 
 class GetTodoByTelegramID(APIView):
     serializer_class = TodoSerializer
@@ -324,7 +335,6 @@ class TaskTodoCount(APIView):
 
         if not period or period not in ['today', 'this_week', 'this_month']:
             return Response({'error': 'Invalid parameters'})
-
         result = get_todo_counts_by_period_for_task(period)
         return Response(result)
 
@@ -363,11 +373,8 @@ class TodoCountView(APIView):
                     ).count()
                 else:
                     todo_count = 0  # Unknown filter_param value, handle accordingly
-
                 region_data['counts'][task.name] = todo_count
-
             result.append(region_data)
-
         return Response(result)
 
 
@@ -453,11 +460,8 @@ class DistrictMemberTodoCountView(APIView):
                     ).count()
                 else:
                     todo_count = 0  # Unknown filter_param value, handle accordingly
-
                 member_data['counts'][task.name] = todo_count
-
             result['members'].append(member_data)
-
         return Response(result)
 
 
