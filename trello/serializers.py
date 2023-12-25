@@ -34,7 +34,7 @@ class TodoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Todo
-        fields = ('id', 'member', 'organization', 'task_name', 'district_name', 'location', 'photo')
+        fields = ('id', 'created_at', 'member', 'organization', 'task_name', 'district_name', 'location', 'photo')
 
     def get_task_name(self, instance):
         # Fetch 'name' directly from the associated Task object
