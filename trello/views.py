@@ -78,6 +78,9 @@ class TodoViewSetAPI(ModelViewSet):
 
         # Modify the response data to include 'full_name' directly under 'member'
         data = serializer.data
+        created_at = instance.created_at
+        data['created_at'] = created_at
+
         member_full_name = instance.member.full_name
         data['member'] = member_full_name
 
