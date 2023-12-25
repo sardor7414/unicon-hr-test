@@ -18,8 +18,8 @@ urlpatterns = [
     path('', include(router.urls)),
     path('checkMember/<int:telegram_id>/', CheckUserTelegramIDAPI.as_view()),
     path('getTodo/<int:telegram_id>/', GetTodoByTelegramID.as_view()),
-    path('region-stats/', RegionStatsViewSet.as_view({'get': 'get'}), name='region-stat'),
-    path('district-stats-by-region/<int:region_id>/', DistrictStatsByRegion.as_view({'get': 'list'}), name='district-stat-by-region'),
+    path('region-stats/', RegionStatsViewSet.as_view({'get': 'list'}), name='region-stat'),
+    path('district-stats-by-region/', DistrictStatsByRegion.as_view({'get': 'list'}), name='district-stat-by-region'),
     path('member-count-by-district/', DistrictTodoMemberCount.as_view(), name='district-todo-count'),
     path('task-todo-count/', TaskTodoCount.as_view(), name='task-todo-count'),
     # Task lar kesimida Todos larni olish

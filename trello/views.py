@@ -92,189 +92,140 @@ class GetTodoByTelegramID(APIView):
 
     def get(self, request, telegram_id, *args, **kwargs):
         # Siz bu qismni o'zgartirib, kerakli filtratsiyani qo'shishingiz mumkin
-        member_todos = Todo.objects.filter(member__telegram_id=telegram_id).order_by('-id')[:3]
+        member_todos = Todo.objects.filter(member__telegram_id=telegram_id).order_by('-id')[:5]
         serializer = TodoSerializer(member_todos, many=True)
         return Response(serializer.data)
 
 
-class RegionStatsViewSet(viewsets.GenericViewSet):
-    serializer_class = RegionSerializer
+class RegionStatsViewSet(viewsets.ModelViewSet):
     queryset = Region.objects.all()
-
-    def get(self, request, *args, **kwargs):
-        # Filterlarni olish
-        period = request.query_params.get('period', 'today')
-        daily_plan = int(request.query_params.get('daily_plan', 1))
-
-        # Regionlar ro'yxati
-        regions = Region.objects.annotate(
-            count_district=Count('district', distinct=True),
-            member_count=Count('member', distinct=True)
-        )
-
-        # Har bir Region uchun count_per_interval va todo_countlar
-        result = []
-        total_results = {
-            'region': 'Total',
-            'count_district': 0,
-            'member_count': 0,
-            'count_per_interval': 0,
-            'todo_count': 0,
-            'percentage': 0,
-            'difference': 0,
-        }
-        for region in regions:
-            # Datelarni olish
-            today_date = datetime.now().date()
-            yesterday_date = today_date - timedelta(days=1)
-            this_week_date = today_date - timedelta(days=datetime.now().weekday())
-            this_month_date = today_date.replace(day=1)
-
-            # Filterlarni tayyorlash
-            period_filters = {
-                'today': Q(created_at__date=today_date),
-                'yesterday': Q(created_at__date=yesterday_date),
-                'this_week': Q(created_at__date__gte=this_week_date),
-                'this_month': Q(created_at__date__gte=this_month_date),
-            }
-
-            # Har bir period uchun this_week_days ni aniqlash
-            if period == 'today':
-                this_week_days = 1
-            elif period == 'yesterday':
-                this_week_days = 1
-            elif period == 'this_week':
-                this_week_days = (today_date - this_week_date).days + 1
-            elif period == 'this_month':
-                this_week_days = (today_date - this_month_date).days + 1
-
-            count_per_interval = daily_plan * region.member_count * this_week_days
-
-            # Todolarni sanash
-            todo_count = Todo.objects.filter(
-                Q(member__district__region=region) & period_filters[period]
-            ).count()
-
-            # Foizlar va farqlar
-            percentage = (todo_count / count_per_interval) * 100 if count_per_interval > 0 else 0
-            difference = todo_count - count_per_interval
-
-            total_results['count_district'] += region.count_district
-            total_results['member_count'] += region.member_count
-            total_results['count_per_interval'] += count_per_interval
-            total_results['todo_count'] += todo_count
-            total_results['difference'] += difference
-
-            result.append({
-                'region': region.name,
-                'count_district': region.count_district,
-                'member_count': region.member_count,
-                'count_per_interval': count_per_interval,
-                'todo_count': todo_count,
-                'percentage': f"{round(percentage, 1)}%",
-                'difference': difference,
-            })
-
-        result.append(total_results)
-        return Response(result)
-
-
-
-class DistrictStatsByRegion(viewsets.GenericViewSet):
     serializer_class = RegionSerializer
-    queryset = Region.objects.all()
+
+    def get_serializer_context(self):
+        return {'request': self.request}
 
     def list(self, request, *args, **kwargs):
-        # Filterlarni olish
-        period = request.query_params.get('period', 'today')
-        daily_plan = int(request.query_params.get('daily_plan', 1))
-        region_id = kwargs.get('region_id')  # Region ID ni olish
+        regions = self.get_queryset()
+        region_data = []
 
-        try:
-            # Regionlarni aniqlash
-            region = Region.objects.get(id=region_id)
-        except Region.DoesNotExist:
-            return Response({'error': 'Region not found'}, status=status.HTTP_404_NOT_FOUND)
+        for region in regions:
+            region_dict = {'region_name': region.name}
 
-        # Har bir period uchun this_week_days ni aniqlash
-        if period == 'today':
-            this_week_days = 1
-            today_date = datetime.now().date()
-            yesterday_date = today_date - timedelta(days=1)
-            this_week_date = today_date
-            this_month_date = today_date.replace(day=1)
-        elif period == 'yesterday':
-            this_week_days = 1
-            today_date = datetime.now().date()
-            yesterday_date = today_date - timedelta(days=1)
-            this_week_date = today_date
-            this_month_date = today_date.replace(day=1)
-        elif period == 'this_week':
-            this_week_days = datetime.now().weekday() + 1
-            today_date = datetime.now().date()
-            yesterday_date = today_date - timedelta(days=1)
-            this_week_date = today_date - timedelta(days=datetime.now().weekday())
-            this_month_date = today_date.replace(day=1)
-        elif period == 'this_month':
-            this_week_days = (datetime.now().date() - datetime.now().replace(day=1).date()).days + 1
-            today_date = datetime.now().date()
-            yesterday_date = today_date - timedelta(days=1)
-            this_week_date = today_date - timedelta(days=datetime.now().weekday())
-            this_month_date = today_date.replace(day=1)
+            region_dict['region_id'] = region.id
 
-        # Districtlar ro'yxati
-        districts = region.district_set.annotate(
-            member_count=Count('member', distinct=True)
-        )
+            # 'region' ga tegishli 'district'lar soni
+            region_dict['district_count'] = region.district_set.count()
 
-        # Har bir District uchun count_per_interval va todo_countlar
-        result = []
-        total_results = {
-            'region': region.name,
-            'count_district': 0,
-            'member_count': 0,
-            'count_per_interval': 0,
-            'todo_count': 0,
-            'percentage': 0,
-            'difference': 0,
-        }
-        for district in districts:
-            # Filterlarni tayyorlash
-            period_filters = {
-                'today': Q(created_at__date=today_date),
-                'yesterday': Q(created_at__date=yesterday_date),
-                'this_week': Q(created_at__date__gte=this_week_date),
-                'this_month': Q(created_at__date__gte=this_month_date),
-            }
+            # 'region'ga tegishli 'member'lar soni
+            region_dict['member_count'] = region.member_set.count()
 
-            count_per_interval = daily_plan * district.member_count * this_week_days
+            # 'region' ga tegishli kunlik reja
+            daily_plan = request.GET.get('daily_plan', 5)
+            region_dict['seminar_plan'] = int(daily_plan) * region_dict['member_count']
 
-            # Todolarni sanash
-            todo_count = Todo.objects.filter(
-                Q(member__district=district) & period_filters[period]
+            # 'region' da bajarilgan ishlar soni today uchun
+            today = date.today()
+            region_dict['tasks_done_today'] = Todo.objects.filter(
+                member__region=region,
+                created_at__year=today.year,
+                created_at__month=today.month,
+                created_at__day=today.day
             ).count()
 
-            # Foizlar va farqlar
-            percentage = (todo_count / count_per_interval) * 100 if count_per_interval > 0 else 0
-            difference = todo_count - count_per_interval
+            # 'region' da bajarilgan ishlar soni yesterday uchun
+            yesterday = today - timedelta(days=1)
+            region_dict['tasks_done_yesterday'] = Todo.objects.filter(
+                member__region=region,
+                created_at__year=yesterday.year,
+                created_at__month=yesterday.month,
+                created_at__day=yesterday.day
+            ).count()
 
-            total_results['count_district'] += 1
-            total_results['member_count'] += district.member_count
-            total_results['count_per_interval'] += count_per_interval
-            total_results['todo_count'] += todo_count
-            total_results['difference'] += difference
+            # 'region' da bajarilgan ishlar soni this_week uchun
+            start_of_week = today - timedelta(days=today.weekday())
+            region_dict['tasks_done_this_week'] = Todo.objects.filter(
+                member__region=region,
+                created_at__gte=start_of_week
+            ).count()
 
-            result.append({
-                'district': district.name,
-                'member_count': district.member_count,
-                'count_per_interval': count_per_interval,
-                'todo_count': todo_count,
-                'percentage': f"{round(percentage, 1)}%",
-                'difference': difference,
-            })
+            # 'region' da bajarilgan ishlar sonining 'region' ga tegishli kunlik reja nisbatan farqi
+            region_dict['seminar_plan_difference'] = f"{(region_dict['tasks_done_today'] / region_dict['seminar_plan']) * 100}%" \
+                if region_dict['seminar_plan'] != 0 else 0
 
-        result.append(total_results)
-        return Response(result)
+            # 'region' da bajarilgan ishlar soni yesterday uchun va today uchun farqi
+            region_dict['tasks_done_difference'] = region_dict['tasks_done_today'] - region_dict['tasks_done_yesterday']
+
+            region_data.append(region_dict)
+
+        return Response(region_data)
+
+
+
+class DistrictStatsByRegion(viewsets.ModelViewSet):
+    queryset = District.objects.all()
+    serializer_class = DistrictSerializer
+
+    def get_serializer_context(self):
+        return {'request': self.request}
+
+    def list(self, request, *args, **kwargs):
+        # 'region_id' ni requestdan olish
+        region_id = request.GET.get('region_id', None)
+
+        # Agar 'region_id' berilgan bo'lsa, buni o'rnating, aks holda barcha 'districtlar'ni olish
+        if region_id:
+            districts = District.objects.filter(region_id=region_id)
+        else:
+            districts = District.objects.all()
+
+        district_data = []
+
+        for district in districts:
+            district_dict = {'district_name': district.name, 'district_id': district.id}
+
+            # 'district' ga tegishli 'member'lar soni
+            district_dict['member_count'] = Member.objects.filter(district=district).count()
+
+            # 'district' ga tegishli kunlik reja
+            daily_plan = request.GET.get('daily_plan', 5)
+            district_dict['seminar_plan'] = int(daily_plan) * district_dict['member_count']
+
+            # 'district' da bajarilgan ishlar soni today uchun
+            today = date.today()
+            district_dict['tasks_done_today'] = Todo.objects.filter(
+                member__district=district,
+                created_at__year=today.year,
+                created_at__month=today.month,
+                created_at__day=today.day
+            ).count()
+
+            # 'district' da bajarilgan ishlar soni yesterday uchun
+            yesterday = today - timedelta(days=1)
+            district_dict['tasks_done_yesterday'] = Todo.objects.filter(
+                member__district=district,
+                created_at__year=yesterday.year,
+                created_at__month=yesterday.month,
+                created_at__day=yesterday.day
+            ).count()
+
+            # 'district' da bajarilgan ishlar soni this_week uchun
+            start_of_week = today - timedelta(days=today.weekday())
+            district_dict['tasks_done_this_week'] = Todo.objects.filter(
+                member__district=district,
+                created_at__gte=start_of_week
+            ).count()
+
+            # 'district' da bajarilgan ishlar sonining 'district' ga tegishli kunlik reja nisbatan farqi
+            district_dict['seminar_plan_difference'] = f"{(district_dict['tasks_done_today'] / district_dict[
+                'seminar_plan']) * 100}%" if district_dict['seminar_plan'] != 0 else 0
+
+            # 'district' da bajarilgan ishlar soni yesterday uchun va today uchun farqi
+            district_dict['tasks_done_difference'] = district_dict['tasks_done_today'] - district_dict[
+                'tasks_done_yesterday']
+
+            district_data.append(district_dict)
+
+        return Response(district_data)
 
 
 def get_todo_counts_by_period_for_district(district_id, period):
