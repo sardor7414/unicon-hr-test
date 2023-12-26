@@ -66,12 +66,29 @@ class CheckUserTelegramIDAPI(APIView):
 class TaskViewSetAPI(ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
-
-
+import json
+class CreateTodo(APIView):
+    def post(self,request):
+        task = request.data.get('task')
+        photo = request.data.get('photo')
+        organization = request.data.get('organization')
+        latitude  = request.data.get('latitude')
+        longitude = request.data.get('longitude')
+        member =request.data.get('member')
+        try:
+            member_id = Member.objects.get(id =int(member))
+            try:
+                task_id = Task.objects.get(id =int(task))
+                todo = Todo.objects.create(photo=photo,task=task_id,member=member_id,organization=organization,latitude=latitude,longitude=longitude)
+                serializer = TodoSerializer(todo,partial=True)
+                return Response(serializer.data)
+            except Task.DoesNotExist:
+                return Response(status=status.HTTP_204_NO_CONTENT)
+        except Member.DoesNotExist:
+            return Response(status=status.HTTP_204_NO_CONTENT)
 class TodoViewSetAPI(ModelViewSet):
     queryset = Todo.objects.all()
-    serializer_class = TodoSerializer
-
+    serializer_class = TodoSerializer 
     def get(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)

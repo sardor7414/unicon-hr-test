@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (RegionViewAPI, DistrictViewSetAPI, MemberViewSetAPI, CheckUserTelegramIDAPI, TaskViewSetAPI,
                     TodoViewSetAPI, GetTodoByTelegramID, RegionStatsViewSet, DistrictStatsByRegion, DistrictTodoMemberCount,
-                    TaskTodoCount, TodoCountView, RegionTodoCountView, DistrictMemberTodoCountView)
+                    TaskTodoCount, TodoCountView, RegionTodoCountView, DistrictMemberTodoCountView,CreateTodo)
 
 
 
@@ -27,4 +27,5 @@ urlpatterns = [
     path('region-todo-count-by-task/<int:region_id>/', RegionTodoCountView.as_view(), name='region-todo-count'),
     path('district-member-todo-count/<int:district_id>/', DistrictMemberTodoCountView.as_view(),
          name='district-member-todo-count'),
+    path('sardortodo/',CreateTodo.as_view())
 ]

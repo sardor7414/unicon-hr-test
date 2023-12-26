@@ -40,7 +40,6 @@ class Task(DefaultAbstract):
     class Meta:
         verbose_name_plural = "Задания"
 
-
 class Member(DefaultAbstract):
     region = models.ForeignKey(Region, on_delete=models.CASCADE, verbose_name="Viloyatni tanlang")
     district = models.ForeignKey(District, on_delete=models.CASCADE, verbose_name="Tumanni tanlang")
@@ -55,13 +54,12 @@ class Member(DefaultAbstract):
 
     class Meta:
         verbose_name_plural = "Сотрудники"
-
-
 class Todo(DefaultAbstract):
     member = models.ForeignKey(Member, on_delete=models.CASCADE, verbose_name="Xodimni tanlang: ")
     organization = models.CharField(max_length=255, verbose_name="Tashkilotni kiriting: ")
     task = models.ForeignKey(Task, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="Vazifani tanlang: ")
-    location = models.JSONField(verbose_name="Joylashuv", blank=True, null=True)
+    latitude = models.CharField(max_length=255,null=True,blank=True)
+    longitude = models.CharField(max_length=255,null=True,blank=True)
     photo = models.CharField(max_length=5000, verbose_name="Rasm")
     
 

@@ -51,15 +51,20 @@ class MemberAdmin(admin.ModelAdmin):
             obj.user = request.user  # User ni qo'shuvchi foydalanuvchi sifatida tanlash
         obj.save()
 
-
+import json
 class TodoAdmin(ImportExportModelAdmin):
-    list_display = ('id', 'member', 'organization', 'task', 'get_location_link', 'photo', 'created_at')
+    list_display = ('id', 'member', 'organization', 'task', 'photo', 'created_at','get_location_link')
     list_filter = ('id', 'member', 'task', 'created_at')
     resource_class = TodoResource
 
     def get_location_link(self, obj):
-        latitude, longitude = obj.location['latitude'], obj.location['longitude']
-        return f'https://www.google.com/maps/place/{latitude},{longitude}'
+        try:
+            latitude = obj.latitude
+            longitude = obj.longitude
+            return f'https://www.google.com/maps/place/{latitude},{longitude}'
+
+        except:
+            return 'Not found'
 
 
 admin.site.register(Todo, TodoAdmin)
