@@ -62,7 +62,7 @@ class Todo(DefaultAbstract):
     organization = models.CharField(max_length=255, verbose_name="Tashkilotni kiriting: ")
     task = models.ForeignKey(Task, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="Vazifani tanlang: ")
     location = models.JSONField(verbose_name="Joylashuv", blank=True, null=True)
-    photo = models.ImageField(upload_to='todos/', verbose_name="Rasm")
+    photo = models.CharField(max_length=5000, verbose_name="Rasm")
     
 
     def __str__(self):
