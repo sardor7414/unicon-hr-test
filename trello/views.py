@@ -1,7 +1,7 @@
 from rest_framework import generics, status, viewsets
 from .models import Region, District, Member, Task, Todo
 from rest_framework.viewsets import ModelViewSet
-from .serializers import RegionSerializer, DistrictSerializer, MemberSerializer, TaskSerializer, TodoSerializer
+from .serializers import RegionSerializer, DistrictSerializer, MemberSerializer, TaskSerializer, TodoSerializer,TodoNewSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db.models import Count
@@ -88,7 +88,7 @@ class CreateTodo(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
 class TodoViewSetAPI(ModelViewSet):
     queryset = Todo.objects.all()
-    serializer_class = TodoSerializer 
+    serializer_class = TodoNewSerializer 
     def get(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)

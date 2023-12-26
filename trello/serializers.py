@@ -20,3 +20,9 @@ class TodoSerializer(serializers.ModelSerializer):
    class Meta:
        model = Todo
        fields = '__all__'
+class TodoNewSerializer(serializers.ModelSerializer):
+   task = TaskSerializer()
+   member  = MemberSerializer()
+   class Meta:
+       model = Todo
+       fields = ['created_at','updated_at','organization','photo','task','member','latitude','longitude']
