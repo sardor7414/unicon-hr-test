@@ -216,8 +216,7 @@ class DistrictStatsByRegion(viewsets.ModelViewSet):
             ).count()
 
             # 'district' da bajarilgan ishlar sonining 'district' ga tegishli kunlik reja nisbatan farqi
-            district_dict['seminar_plan_difference'] = f"{(district_dict['tasks_done_today'] / district_dict[
-                'seminar_plan']) * 100}%" if district_dict['seminar_plan'] != 0 else 0
+            district_dict['seminar_plan_difference'] = f"{(district_dict['tasks_done_today'] / district_dict['seminar_plan']) * 100}%" if district_dict['seminar_plan'] != 0 else 0
 
             # 'district' da bajarilgan ishlar soni yesterday uchun va today uchun farqi
             district_dict['tasks_done_difference'] = district_dict['tasks_done_today'] - district_dict[
