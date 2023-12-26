@@ -7,7 +7,7 @@ from .models import Region, District, Task, Member, Todo
 @admin.register(Region)
 class RegionAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')
-    # fields = ('id', 'name')
+
 
 @admin.register(District)
 class DistrictAdmin(admin.ModelAdmin):
