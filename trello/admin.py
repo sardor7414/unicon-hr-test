@@ -7,7 +7,7 @@ from .models import Region, District, Task, Member, Todo
 @admin.register(Region)
 class RegionAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')
-    fields = ('id', 'name')
+    # fields = ('id', 'name')
 
 @admin.register(District)
 class DistrictAdmin(admin.ModelAdmin):
@@ -22,9 +22,13 @@ class DistrictAdmin(admin.ModelAdmin):
         if obj is not None and obj.user != request.user:
             return False
         return True
+
     def save_model(self, request, obj, form, change):
-        obj.user = request.user
-        super().save_model(self, request, obj, form, change)
+        # Qo'shish vaqti bo'lsa
+        if not change:
+            obj.user = request.user  # User ni qo'shuvchi foydalanuvchi sifatida tanlash
+        super().save_model(request, obj, form, change)
+
 
 
 @admin.register(Task)
@@ -45,11 +49,13 @@ class MemberAdmin(admin.ModelAdmin):
         if obj is not None and obj.user != request.user:
             return False
         return True
+
     def save_model(self, request, obj, form, change):
         # Qo'shish vaqti bo'lsa
         if not change:
             obj.user = request.user  # User ni qo'shuvchi foydalanuvchi sifatida tanlash
-        obj.save()
+        super().save_model(request, obj, form, change)
+
 
 import json
 class TodoAdmin(ImportExportModelAdmin):
