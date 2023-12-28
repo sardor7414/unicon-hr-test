@@ -39,7 +39,7 @@ class TaskAdmin(admin.ModelAdmin):
 @admin.register(Member)
 class MemberAdmin(admin.ModelAdmin):
     list_display = ('id', 'district', 'full_name', 'phone', 'telegram_id', 'user')
-
+    list_filter = ('id', 'region', 'district', 'full_name', 'phone', 'user')
     def has_change_permission(self, request, obj=None):
         if obj is not None and obj.user != request.user:
             return False
