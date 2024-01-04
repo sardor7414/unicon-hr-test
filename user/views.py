@@ -30,11 +30,11 @@ class UserLoginAPI(APIView):
         if not user:
             return Response({
                 'error': 'User not found'
-            })
+            }, status=HTTP_400_BAD_REQUEST)
         if not user.check_password(password):
             return Response({
                 'error': 'Password not match'
-            })
+            }, status=HTTP_400_BAD_REQUEST)
         token, _ = Token.objects.get_or_create(user=user)
         return Response({
             'token': token.key
